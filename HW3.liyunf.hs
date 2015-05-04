@@ -102,6 +102,16 @@ prog (x:xs) m = case (cmd x m) of
                  Just n -> prog xs n
 
 -- | Evaluate a program starting with an empty stack.
+--
+--   >>> run [Push 4, Push 5, Push 10, Dup, Add, Add, Swap, Dup, Pop]
+--   Just [4,25]
+--
+--   >>> run [Push 4, Push 6, Swap, Dup, Add, Add, Pop]
+--   Just []
+--
+--   >>> run [Push 4, Push 6, Swap, Dup, Add, Add, Pop, Pop]
+--   Nothing
+--
 run :: Prog -> Maybe Stack
 run p = prog p []
 
@@ -159,19 +169,48 @@ type State = (Macros,Stack)
 
 
 -- | Semantics of an extended command.
+--
+--   >>> xcmd (Define "add" [add]) ([],[4,5])
+--   Just ([("add",[Basic Add])],[4,5])
+--
+--   >>> xcmd (Call "add") ([("add", [Basic Add])],[4,5])
+--   Just ([("add",[Basic Add])],[9])
+--
+--   >>> xcmd (Basic Add) ([],[4,5])
+--   Just ([],[9])
+--
+--   >>> xcmd (Basic Swap) ([],[4,5])
+--   Just ([],[5,4])
+--
+--   >>> xcmd (Basic Dup) ([],[3])
+--   Just ([],[3,3])
+--
+--   >>> xcmd (Basic Pop) ([],[4,5])
+--   Just ([],[5])
+--
+--   >>> xcmd (Basic (Push 4)) ([],[5])
+--   Just ([],[4,5])
+--
 xcmd :: XCmd -> State -> Maybe State
-xcmd (Define name x) m = Just ((name,x):(fst m),snd m)
+xcmd (Define name x) m = Just ((fst m)++[(name,x)],snd m)
 xcmd (Call name)     m = let  s = case (filter (\x->name==(fst x)) (fst m)) of
                                    [t] -> xprog (snd t) m
                                    _   -> Nothing
                          in case s of
                              Nothing -> Nothing
-                             Just y  -> Just (filter (\x -> (name /= (fst x))) (fst m),snd y)
+                             Just y  -> Just (fst m,snd y)
 xcmd (Basic name)    m = case (cmd name (snd m)) of
                           Nothing -> Nothing
                           Just x  -> Just (fst m, x)
 
 -- | Semantics of an extended program.
+--
+--   >>> xprog [push 3,triple,Call "double"] ([("a",[double,pop]),("b",[triple,Call "triple"])],[4,5])
+--   Nothing
+--
+--   >>> xprog [double,push 3,Call "double"] ([("a",[pop]),("b",[triple,Call "triple"])],[4,5])
+--   Just ([("a",[Basic Pop]),("b",[Define "triple" [Basic Dup,Basic Dup,Basic Add,Basic Add],Call "triple"]),("double",[Basic Dup,Basic Add])],[6,4,5])
+--
 xprog :: XProg -> State -> Maybe State
 xprog []     m = Just m
 xprog (p:ps) m = case (xcmd p m) of
