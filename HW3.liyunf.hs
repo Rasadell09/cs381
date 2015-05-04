@@ -1,6 +1,6 @@
 module HW3 where
 
-
+import Prelude
 --
 -- * Part 1: Simple Stack Language
 --
@@ -20,14 +20,11 @@ data Cmd = Push Int      -- push an int onto the stack
          | Add           -- add the top two ints on the stack
          deriving (Eq,Show)
 
-
-           --
 -- ** Semantics
 --
 
 -- | A stack of integers.
 type Stack = [Int]
-
 
 -- | Denotational semantics of a command.
 --
@@ -64,9 +61,22 @@ type Stack = [Int]
 --   >>> cmd Add [1]
 --   Nothing
 --
-cmd Cmd [] = Nothing
-cmd Cmd (x:xs) = 
-
+cmd :: Cmd -> Stack -> Maybe Stack
+cmd (Push n) m = Just (n:m)
+cmd Pop      m = case m of
+                  [] -> Nothing
+                  _  -> Just (tail m)
+cmd Dup      m = case m of
+                  [] -> Nothing
+                  _  -> Just ((head m):m)
+cmd Swap     m = case m of
+                  [x] -> Nothing
+                  []  -> Nothing
+                  _   -> Just ((head (tail m)):(head m):(tail (tail m)))
+cmd Add      m = case m of
+                  [x] -> Nothing
+                  []  -> Nothing
+                  _   -> Just (((head m)+(head (tail m))):(tail (tail m)))
 
 -- | Denotational semantics of a program.
 --
@@ -85,12 +95,15 @@ cmd Cmd (x:xs) =
 --   >>> prog [Pop,Dup] [5]
 --   Nothing
 --
-prog = undefined
-
+prog :: Prog -> Stack -> Maybe Stack
+prog []     m = Just m
+prog (x:xs) m = case (cmd x m) of
+                 Nothing -> Nothing
+                 Just n -> prog xs n
 
 -- | Evaluate a program starting with an empty stack.
-run = undefined
-
+run :: Prog -> Maybe Stack
+run p = prog p []
 
 --
 -- * Part 2: Adding Macros
@@ -134,7 +147,6 @@ triple = Define "triple" [dup,dup,add,add]
 trouble :: XCmd
 trouble = Define "trouble" [dup, Call "triple", swap, Call "double"]
 
-
 --
 -- ** Semantics
 --
@@ -148,13 +160,23 @@ type State = (Macros,Stack)
 
 -- | Semantics of an extended command.
 xcmd :: XCmd -> State -> Maybe State
-xcmd = undefined
-
+xcmd (Define name x) m = Just ((name,x):(fst m),snd m)
+xcmd (Call name)     m = let  s = case (filter (\x->name==(fst x)) (fst m)) of
+                                   [t] -> xprog (snd t) m
+                                   _   -> Nothing
+                         in case s of
+                             Nothing -> Nothing
+                             Just y  -> Just (filter (\x -> (name /= (fst x))) (fst m),snd y)
+xcmd (Basic name)    m = case (cmd name (snd m)) of
+                          Nothing -> Nothing
+                          Just x  -> Just (fst m, x)
 
 -- | Semantics of an extended program.
 xprog :: XProg -> State -> Maybe State
-xprog = undefined
-
+xprog []     m = Just m
+xprog (p:ps) m = case (xcmd p m) of
+                  Nothing -> Nothing
+                  Just x  -> xprog ps x
 
 -- | Evaluate a program starting with an empty stack.
 --
@@ -171,4 +193,6 @@ xprog = undefined
 --   Nothing
 --
 xrun :: XProg -> Maybe Stack
-xrun = undefined
+xrun p = case (xprog p ([],[])) of
+          Nothing -> Nothing
+          Just x  -> Just (snd x)
