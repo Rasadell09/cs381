@@ -1,3 +1,7 @@
+-- | Name: Yunfan Li
+--   onid: liyunf@onid.oregonstate.edu
+--   OSU ID: 932530195
+
 module HW3 where
 
 import Prelude
