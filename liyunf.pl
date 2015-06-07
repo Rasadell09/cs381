@@ -1,3 +1,8 @@
+% Name: Yunfan Li
+% Class: CS381-001
+% Onid: liyunf@onid.oregonstate.edu
+% OSU ID: 932530195
+
 % Here are a bunch of facts describing the Simpson's family tree.
 % Don't change them!
 
@@ -69,13 +74,15 @@ brother(X,Y) :- male(X), parent(Z,X), parent(Z,Y), X\=Y.
 % 6. Define a predicate `siblingInLaw/2`. A sibling-in-law is either married to
 %    a sibling or the sibling of a spouse.
 siblingInLaw(X,Y) :- married(X,Z), sibling(Z,Y).
-siblingInLaw(X,Y) :- not(married(X,_)), sibling(X,Z), married(Z,Y).
+siblingInLaw(X,Y) :- sibling(X,Z), married(Z,Y).
 
 % 7. Define two predicates `aunt/2` and `uncle/2`. Your definitions of these
 %    predicates should include aunts and uncles by marriage.
-aunt(X,Y) :- female(X), female(Y), sibling(X,Z), married(Z,_), parent(Z,Y).
-%uncle(X,Y) :- male(X), sibling(X,Z), parent(Z,Y).
-
+aunt(X,Y) :- female(X), sibling(X,W), child(Y,W).
+aunt(X,Y) :- female(X), married(X,W), sibling(W,Z), child(Y,Z).
+uncle(X,Y) :- male(X), sibling(X,W), child(Y,W).
+uncle(X,Y) :- male(X), married(X,W), sibling(W,Z), child(Y,Z).
+    
 % 8. Define the predicate `cousin/2`.
 cousin(X,Y) :- parent(Z,X), sibling(Z,W), parent(W,Y).
 
@@ -94,6 +101,5 @@ ancestor(X,Y) :- parent(X,Y); parent(X,Z), parent(Z,Y).
 %     from the list `L`. The resulting list should be bound to `M`. It's OK if
 %     this function loops on queries where `L` is not provided.
 rdup([],[_]).
-rdup([],[X|_]) :- rdup([],[X]).
 rdup([X|T],[Y|R]) :- X=Y, rdup(T,[Y|R]).
 rdup([X|T],[Y|R]) :- not(X=Y), rdup([X|T],R).
